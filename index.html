@@ -76,9 +76,9 @@ body{padding-left:var(--side)}
 .f.picktitle{display:none}
 .picktitle p{margin:0;font-family:var(--display);font-size:19px;font-weight:800;color:var(--navy);padding:6px 0 9px;line-height:1.25}
 [data-theme="dark"] .picktitle p{color:#fff}
-@media (min-width:1101px){ .f.pickmain{display:none} .f.picktitle{display:block} }
+@media (min-width:900px){ .f.pickmain{display:none} .f.picktitle{display:block} }
 /* Wide: editor on the left, the page on the right, updating as you type. */
-@media (min-width:1280px){
+@media (min-width:900px){
   .work{display:grid;grid-template-columns:minmax(520px,1fr) minmax(0,1fr);align-items:start}
   /* Two even rows, in working order: open, save, generate — then print, PDF, clear. */
   .app > .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
@@ -99,7 +99,7 @@ body{padding-left:var(--side)}
   .sheets{overflow:auto}
 }
 /* Narrower than the sidebar plus a sheet: it becomes a slim bar along the top. */
-@media (max-width:1100px){
+@media (max-width:899px){
   body{padding-left:0}
   .side .sub{display:none!important}
   .side{position:relative;width:auto;bottom:auto}
@@ -112,7 +112,7 @@ body{padding-left:var(--side)}
   .sidefoot{margin:0 0 0 auto;flex-direction:row;align-items:center}
   .herotree{display:none}
 }
-@media (max-width:900px){ .side .co{display:none} }
+@media (max-width:899px){ .side .co{display:none} }
 .card{position:relative;background:#fff;border:1px solid #DDDDDD;border-radius:14px;overflow:hidden;padding:38px 34px 36px;box-shadow:0 12px 32px rgba(27,77,160,.07)}
 .card::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,#22A749 0%,#1E7A74 50%,#1B4DA0 100%)}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px 22px}
@@ -844,7 +844,7 @@ body{background-color:#FFFFFF;
 .side::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.32;
   background-image:linear-gradient(#15366B 1px,transparent 1px),linear-gradient(90deg,#15366B 1px,transparent 1px);
   background-size:24px 24px}
-@media (min-width:1280px){
+@media (min-width:900px){
   .sheets{background-color:var(--pane);
     background-image:linear-gradient(var(--paneline) 1px,transparent 1px),linear-gradient(90deg,var(--paneline) 1px,transparent 1px);
     background-size:24px 24px;box-shadow:inset 1px 0 0 #D6DFEE}
@@ -872,11 +872,11 @@ body{background-color:#FFFFFF;
 [data-theme="dark"] body .side .build{color:#8A8A8A}
 [data-theme="dark"] .side .co{color:#BBBBBB}
 [data-theme="dark"] .side .themebtn{color:#EDEDED;border-color:#3A3A3A}
-@media (min-width:1280px){
+@media (min-width:900px){
   [data-theme="dark"] .sheets{box-shadow:inset 1px 0 0 #3A3A3A}
   [data-theme="dark"] .app > .actions{background:#171717;box-shadow:0 -1px 0 #3A3A3A}
 }
-@media (max-width:1100px){
+@media (max-width:899px){
   [data-theme="dark"] .side{box-shadow:inset 0 -1px 0 #3A3A3A}
   [data-theme="dark"] body .side .tab.on{box-shadow:inset 0 -3px 0 #22A749}
 }
@@ -961,7 +961,7 @@ body .side .tab.on{background:transparent}
 .side .sub.open > button:nth-of-type(5){animation-delay:.24s}
 [data-theme="dark"] body .side .tab.on{background:transparent;box-shadow:none}
 [data-theme="dark"] .side .ink{background:#2C2C2C;box-shadow:inset 3px 0 0 #22A749}
-@media (max-width:1100px){ [data-theme="dark"] .side .ink{box-shadow:inset 0 -3px 0 #22A749} }
+@media (max-width:899px){ [data-theme="dark"] .side .ink{box-shadow:inset 0 -3px 0 #22A749} }
 
 /* 9 · light and dark: the whole screen crossfades as one picture, so nothing
    changes on its own timer (grids and gradients can't fade element by element). */
@@ -1094,7 +1094,7 @@ body.pagemode #blk.red{background:#FCEBEA;box-shadow:0 10px 28px rgba(165,42,36,
 
 /* page-first layout at side-by-side width */
 #pbar{display:none}
-@media (min-width:1280px){
+@media (min-width:900px){
   body.pagemode #pbar{display:flex;align-items:center;gap:14px;position:fixed;top:0;left:var(--side);right:0;height:64px;z-index:45;
     box-sizing:border-box;padding:0 22px 0 26px;background:#fff;box-shadow:0 1px 0 #DDDDDD}
   body.pagemode .work{padding-top:64px}
@@ -1125,6 +1125,22 @@ body.pagemode #blk.red{background:#FCEBEA;box-shadow:0 10px 28px rgba(165,42,36,
   [data-theme="dark"] #pbar .pbpaper select{color:#EDEDED;border-color:#3A3A3A}
   [data-theme="dark"] #pfields{background:#171717;color:#EDEDED;border-color:#3A3A3A}
 }
+/* 900–1279: the page still edits in place, scaled to fit beside a slimmer sidebar. */
+@media (min-width:900px) and (max-width:1279px){
+  :root{--side:204px}
+  .sideIn{padding:26px 14px 20px 18px}
+  .side h1{font-size:21px;margin:24px 0 22px}
+  body.pagemode #pbar{gap:8px;padding:0 12px 0 16px}
+  #pbar .pbpaper{font-size:0;gap:0}
+  #pbar .pbpaper select{max-width:112px;font-size:12px}
+  #pfields{padding:9px 10px;font-size:9px}
+  #pact .actions{gap:6px}
+  #pact .actions button{padding:9px 8px;font-size:9px;letter-spacing:.06em}
+  /* All fields takes the whole pane here; Hide fields brings the page back */
+  body.pagemode.drawer .work{grid-template-columns:minmax(0,1fr)}
+  body.pagemode.drawer .sheets{display:none}
+}
+@media (min-width:900px) and (max-width:1099px){ #pbar .pbh{display:none} }
 @media (min-width:1280px) and (max-width:1420px){
   body.pagemode #pbar{gap:10px;padding:0 16px 0 22px}
   #pbar .pbpaper{font-size:0;gap:0}
@@ -1173,6 +1189,12 @@ body:not(.pagemode) #wbar.on{position:fixed;top:12px}
 #wbar select option{color:#10213B}
 body.writing #blk{opacity:.35;pointer-events:none}
 @media print{ #wbar,.pbreak{display:none!important} }
+/* narrower page pane: the writing bar wraps onto two rows rather than running off the edge */
+@media (min-width:900px) and (max-width:1279px){
+  body.pagemode #wbar.on{flex-wrap:wrap;justify-content:center;row-gap:3px;border-radius:14px;
+    width:max-content;max-width:calc(100vw - var(--side) - 32px);box-sizing:border-box}
+  #wbar .wlab{display:none}
+}
 </style>
 <style id="paperCSS"></style>
 </head>
@@ -1458,7 +1480,7 @@ const CO = {
   conf:"This letter and any attachments are confidential and intended solely for the use of the named recipient(s). If you have received it in error, please notify the sender immediately and permanently delete or destroy all copies."
 };
 // Stamped on screen so an old copy of this file is obvious at a glance.
-const BUILD = "2026.11.10k";
+const BUILD = "2026.11.10l";
 const MONTHS=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
 const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -3735,7 +3757,7 @@ function zoomStep(dir){
 }
 // Side by side, the preview is its own scrolling pane: jumping to the page
 // means scrolling that pane, not the window.
-const SPLIT = matchMedia("(min-width:1280px)");
+const SPLIT = matchMedia("(min-width:900px)");   // page editing from a half-screen window up
 function showSheet(el){
   if(!el) return;
   if(SPLIT.matches) $("sheets").scrollTo({top:0, behavior:"smooth"});
