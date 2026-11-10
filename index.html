@@ -1458,7 +1458,7 @@ const CO = {
   conf:"This letter and any attachments are confidential and intended solely for the use of the named recipient(s). If you have received it in error, please notify the sender immediately and permanently delete or destroy all copies."
 };
 // Stamped on screen so an old copy of this file is obvious at a glance.
-const BUILD = "2026.11.10j";
+const BUILD = "2026.11.10k";
 const MONTHS=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
 const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1471,19 +1471,38 @@ const HHMM = /^(\d{1,2}):(\d{2})$/;
 // A time input only accepts 24-hour HH:MM and silently shows nothing for
 // anything else. Drafts written before these were pickers hold "5:00 PM", so
 // coerce on the way in rather than losing the value.
+// Times are typed the way people say them — 8, 8:30, 830, 8.30am, 1:30 pm, 1330,
+// noon — and kept as 24-hour HH:MM. A two-digit hour (08:30, 17:00) is already
+// that form and is left exactly as it is, so older drafts and seals still match.
+// A bare hour from 1 to 6 with no AM/PM means the afternoon on a work form;
+// the page shows the result straight away ("1:00 PM"), so a wrong guess is seen.
 function normTime(v){
-  v = (v || "").trim();
-  if(!v) return "";
-  if(/^\d{2}:\d{2}$/.test(v)) return v;
-  const ap = /^(\d{1,2})(?::(\d{2}))?\s*([AaPp])\.?[Mm]?\.?$/.exec(v);
-  if(ap){
-    let h = (+ap[1]) % 12;
-    if(/[Pp]/.test(ap[3])) h += 12;
-    return String(h).padStart(2, "0") + ":" + (ap[2] || "00");
-  }
-  const h24 = /^(\d{1,2}):(\d{2})/.exec(v);
-  if(h24) return String(+h24[1]).padStart(2, "0") + ":" + h24[2];
-  return "";
+  let s = (v || "").trim().toLowerCase();
+  if(!s) return "";
+  if(/^\d{2}:\d{2}$/.test(s)) return +s.slice(0, 2) < 24 && +s.slice(3) < 60 ? s : "";
+  if(s === "noon") return "12:00";
+  if(s === "midnight") return "00:00";
+  let ap = null;
+  const t = s.match(/\s*([ap])\.?\s*m?\.?$/);
+  if(t){ ap = t[1]; s = s.slice(0, t.index).trim(); }
+  let h, mi, m;
+  if((m = s.match(/^(\d{1,2})\s*[:.h]\s*(\d{2})$/))){ h = +m[1]; mi = +m[2]; }
+  else if((m = s.match(/^(\d{1,2})$/))){ h = +m[1]; mi = 0; }
+  else if((m = s.match(/^(\d{1,2})(\d{2})$/))){ h = +m[1]; mi = +m[2]; }
+  else return "";
+  if(mi > 59) return "";
+  if(ap){ if(h < 1 || h > 12) return ""; h = h % 12 + (ap === "p" ? 12 : 0); }
+  else if(h > 23) return "";
+  else if(h >= 1 && h <= 6) h += 12;
+  return String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0");
+}
+// A time box is plain text: the browser's own time picker counts as empty until
+// hour, minute and AM/PM are all set, so a typed "8:30" was silently dropped.
+function timeBox(el){
+  el.type = "text"; el.dataset.time = "1";
+  el.autocomplete = "off"; el.spellcheck = false;
+  if(!el.placeholder) el.placeholder = "e.g. 8:30 AM";
+  el.addEventListener("change", () => { const n = normTime(el.value); if(n && fmtTime(n) !== el.value) el.value = fmtTime(n); });
 }
 function fmtTime(v){
   const m = HHMM.exec((v || "").trim());
@@ -2737,8 +2756,9 @@ function drawFormFields(){
         });
       } else {
         el = document.createElement("input");
-        el.type = (fl.type === "date" || fl.type === "time") ? fl.type : "text";
+        el.type = fl.type === "date" ? "date" : "text";
         if(fl.placeholder) el.placeholder = fl.placeholder;
+        if(fl.type === "time") timeBox(el);
       }
       el.id = "fx_" + fl.id;
       wrap.appendChild(lab);
@@ -2891,9 +2911,10 @@ function rsBlock(fl){
         el.addEventListener("input", () => autoGrow(el));
       } else {
         el = document.createElement("input");
-        el.type = (c.type === "date" || c.type === "time") ? c.type : "text";
+        el.type = c.type === "date" ? "date" : "text";
         const ph = (r.ph && r.ph[c.k]) || c.ph;
         if(ph) el.placeholder = ph;
+        if(c.type === "time") timeBox(el);
       }
       el.id = "fx_" + fl.id + "_" + r.k + "_" + c.k;
       el.setAttribute("aria-label", r.label + " \u2014 " + c.label);
@@ -2913,7 +2934,8 @@ function rsBlock(fl){
 
 function formData(){
   const d = {};
-  flatFields(currentForm()).forEach(f => { const el = $("fx_" + f.id); if(el) d[f.id] = el.value; });
+  flatFields(currentForm()).forEach(f => { const el = $("fx_" + f.id);
+    if(el) d[f.id] = f.type === "time" ? (normTime(el.value) || el.value) : el.value; });
   return d;
 }
 
@@ -4862,8 +4884,8 @@ function loadDraft(file){
     Object.keys(d.formData || {}).forEach(k => {
       const el = $("fx_" + k);
       if(!el) return;
-      const v = ftype[k] === "time" ? normTime(d.formData[k]) : d.formData[k];
-      el.value = v;
+      const v = ftype[k] === "time" ? (normTime(d.formData[k]) || d.formData[k] || "") : d.formData[k];
+      el.value = ftype[k] === "time" ? fmtTime(v) : v;
       // A <select> throws away a value it has no option for, without a word.
       // That is exactly what a draft saved before a field became a dropdown
       // carries, so the old value is added to the list rather than erased.
