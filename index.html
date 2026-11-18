@@ -681,6 +681,9 @@ ol.lst li::marker{color:var(--navy);font-weight:700;font-size:.87em}
 #letterCard:not([data-ltype="incentive"]) .in-only{display:none}
 #letterCard[data-ltype="incentive"] .gen-only{display:none}
 #letterCard:not([data-ltype="storevisit"]) .sv-only{display:none}
+#letterCard:not([data-ltype="discount"]) .dc-only{display:none}
+#letterCard[data-ltype="discount"] .gen-only,#letterCard[data-ltype="discount"] .no-po{display:none}
+.sig .soff.c2{grid-template-columns:repeat(2,1fr);column-gap:64px}
 #letterCard[data-ltype="pullout"] .no-po{display:none}
 .wadd.w2{justify-content:center;border-color:rgba(154,163,174,.45)}
 #letterCard[data-ltype="storevisit"] .gen-only{display:none}
@@ -1251,6 +1254,7 @@ body.writing #blk{opacity:.35;pointer-events:none}
           <option value="pullout">Pull-out authorization (CitiHardware)</option>
           <option value="incentive">Sales incentives (Davao Manpower)</option>
           <option value="storevisit">Store visit request (Davao Manpower)</option>
+          <option value="discount">Authorization for discounting (CitiHardware)</option>
         </select></div>
       <div class="trio">
         <div class="f"><label>Date</label><input type="date" id="date"></div>
@@ -1367,6 +1371,38 @@ Davao City</textarea>
         <div class="pomiss" id="svMiss"></div>
       </div>
 
+      <!-- Authorization for discounting: one transaction, one customer, one store. -->
+      <div class="dc-only" id="dcPanel">
+        <div class="group">
+          <h3>Addressed to</h3>
+          <div class="grid">
+            <div class="f"><label>Store manager <i class="req">*</i></label><input id="dc_to" placeholder="e.g. Zennie Padilla"></div>
+            <div class="f"><label>Branch <i class="req">*</i></label><input id="dc_branch" value="CitiHardware "></div>
+            <div class="f wide"><label>Store address</label><input id="dc_addr" placeholder="e.g. Purok Dayang, Brgy. Veterans Village, Zamboanga Sibugay"></div>
+          </div>
+        </div>
+        <div class="group">
+          <h3>The transaction</h3>
+          <div class="grid">
+            <div class="f"><label>Customer <i class="req">*</i></label><input id="dc_cust" placeholder="e.g. Mary Grace Enriquez"></div>
+            <div class="f"><label>Transaction date <i class="req">*</i></label><input type="date" id="dc_txn"></div>
+            <div class="f wide"><label>Discount for</label><input id="dc_what" placeholder="e.g. Soter Vault">
+              <div class="hint">Short name for the subject line: “Authorization for Discounting: Soter Vault”.</div></div>
+          </div>
+        </div>
+        <div class="group">
+          <h3>Items</h3>
+          <div id="dcWrap">
+            <p class="insum" id="dcSum"></p>
+            <div class="addrow"><button type="button" class="addbtn" id="dcTb">Build table…</button></div>
+          </div>
+          <input type="hidden" id="dc_items" value="[]">
+          <div class="hint">One row per item: Qty, Brand, Barcode, Description, SRP, Discount. Write the discount as <b>5%</b> or as pesos off each unit (<b>1,475</b>). The total price is worked out for you.</div>
+        </div>
+        <div class="pomiss" id="dcMiss"></div>
+        <div class="hint" id="dcLong" style="color:#B54708"></div>
+      </div>
+
       <div class="f wide gen-only"><label>Message</label>
         <div class="fmt">
           <button type="button" class="b" data-mark="**" title="Bold">B</button>
@@ -1480,7 +1516,7 @@ const CO = {
   conf:"This letter and any attachments are confidential and intended solely for the use of the named recipient(s). If you have received it in error, please notify the sender immediately and permanently delete or destroy all copies."
 };
 // Stamped on screen so an old copy of this file is obvious at a glance.
-const BUILD = "2026.11.10l";
+const BUILD = "2026.11.18c";
 const MONTHS=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
 const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1590,6 +1626,7 @@ const LETTERS = {
   general: {tab:"letter", name:"General Letter"},
   pullout: {tab:"sales",  name:"Pull-out / Stock Transfer", code:"AHBC-SALES-FORM-SL-001", rev:"01"},
   storevisit: {tab:"sales", name:"Store Visit Request", code:"AHBC-SALES-LTR-SV-001", rev:"01"},
+  discount: {tab:"sales", name:"Authorization for Discounting", code:"AHBC-SALES-LTR-DC-001", rev:"01"},
   // inForms: a letter that lives in a tab of forms, listed in a group of its own
   incentive: {tab:"hr", name:"Sales Incentives Letter", code:"AHBC-HRD-LTR-IN-001", rev:"01", inForms:true}
 };
@@ -2130,7 +2167,8 @@ const LSIGNERS = [
 // what lets a signed letter travel to an approver who still has to type theirs.
 const LETTER_ANCHOR = ["paper","date","subject","rcp","salut","msg","closing","@media",
   "ltype","po_to","po_branch","po_dest","po_addr","po_date","po_date2","po_reason","po_other","po_rep","po_repdesig","po_list","po_items",
-  "in_brand","in_mon","in_year","in_roving","in_station","sv_rcp","sv_visits"];
+  "in_brand","in_mon","in_year","in_roving","in_station","sv_rcp","sv_visits",
+  "dc_to","dc_branch","dc_addr","dc_cust","dc_txn","dc_what","dc_items"];
 
 function sealCtx(){
   if(MODE === "form"){
@@ -2174,6 +2212,7 @@ function anchorDigest(ctx, sg){
   ).filter(x => x !== "po_date2=" && x !== "po_dest=")   // an empty end date leaves older seals as they were
    .filter(x => !/^in_/.test(x) || $("ltype").value === "incentive")   // incentive fields only seal incentive letters
    .filter(x => !/^sv_/.test(x) || $("ltype").value === "storevisit")
+   .filter(x => !/^dc_/.test(x) || $("ltype").value === "discount")
    .join("\u0001") +
     (MODE === "form" && !currentForm().fixed ? "\u0001@paper=" + $("formpaper").value : "");
   if(_adCache.k === k) return _adCache.v;        // hashed once per set of answers
@@ -3873,7 +3912,7 @@ function render(b, data){
     if(inGrid){
       el.classList.add("seated");     // not "grid": that class lays out the editor
       el.innerHTML = `<div class="me"><p class="close">${esc(data.closing)}</p></div>` +
-        `<div class="soff">${data.signoffs.map(cell).join("")}</div>` +
+        `<div class="soff${data.signoffs.length === 2 ? " c2" : ""}">${data.signoffs.map(cell).join("")}</div>` +
         (data.signoffNote ? `<p class="snote">${esc(data.signoffNote)}</p>` : "");
       return el;
     }
@@ -4254,13 +4293,13 @@ let TB_HOME = null;
 function tbPlace(po, inc){
   const tb = $("tb");
   if(!TB_HOME) TB_HOME = {parent: tb.parentNode, next: tb.nextSibling};
-  if(inc) $(inc === "sv" ? "svWrap" : inc === "roving" ? "inRovWrap" : "inStaWrap").appendChild(tb);
+  if(inc) $(inc === "dc" ? "dcWrap" : inc === "sv" ? "svWrap" : inc === "roving" ? "inRovWrap" : "inStaWrap").appendChild(tb);
   else if(po) $("poItemsWrap").appendChild(tb);
   else if(tb.parentNode !== TB_HOME.parent) TB_HOME.parent.insertBefore(tb, TB_HOME.next);
   tb.classList.toggle("po", !!po);
   TB.inc = inc || null;
   TB.po = !!po && !inc;
-  $("tbins").textContent = inc === "sv" ? "Use these visits" : inc ? "Use this list" : po ? "Use these items" : "Insert table";
+  $("tbins").textContent = inc === "sv" ? "Use these visits" : inc === "dc" ? "Use these items" : inc ? "Use this list" : po ? "Use these items" : "Insert table";
 }
 function poTbOpen(){
   tbPlace(true);
@@ -4311,7 +4350,8 @@ const OPENER = {
   general:   {salut:"Dear Sir/Madam,",         closing:"Sincerely,"},
   pullout:   {salut:"Dear Sir/Madam:",         closing:"Thank you,"},
   incentive: {salut:"To whom it may concern,", closing:"Sincerely,"},
-  storevisit:{salut:"Dear Ma'am,",              closing:"Sincerely,"}
+  storevisit:{salut:"Dear Ma'am,",              closing:"Sincerely,"},
+  discount:  {salut:"Good day,",                closing:"Sincerely yours,"}
 };
 function applyLtype(swap){
   const lt = OPENER[$("ltype").value] ? $("ltype").value : "general";
@@ -4331,6 +4371,8 @@ function applyLtype(swap){
   inCheck();
   drawSvItems();
   svCheck();
+  drawDcItems();
+  dcCheck();
 }
 
 // ---- Sales incentives ----
@@ -4522,6 +4564,142 @@ function svTbCommit(){
   tbClose(); generate();
   if(dropped.length) alert("These columns didn’t match Merchandiser, Assigned at, Duty to, Date of visit or Reason and were left out:\n\n• " + dropped.join("\n• "));
 }
+// ---- Authorization for discounting ----
+const DC_HEAD = ["Qty","Brand","Barcode","Description","SRP","Discount"];
+const DC_COLS = ["q","br","bc","ds","srp","disc"];
+const DC_RX = {q:/^(qty|quantity|qty\.|pcs|units?)$/i,
+               br:/^(brand|brands|make)$/i,
+               bc:/^(barcode|bar code|sku|item code|code|upc|ean)$/i,
+               ds:/^(description|item|item description|product|particulars|desc)$/i,
+               srp:/^(srp|price|unit price|retail price|selling price|srp \(php\))$/i,
+               disc:/^(discount|discount %|disc|disc\.|disc %|less|discount amount)$/i};
+const dcRows = () => { try { const a = JSON.parse($("dc_items").value || "[]"); return Array.isArray(a) ? a : []; } catch(e){ return []; } };
+const dcNum = t => { const c = String(t || "").replace(/[₱,\s]|php/gi, ""); return c !== "" && isFinite(+c) ? +c : null; };
+const peso = n => "₱" + n.toLocaleString("en-US", Number.isInteger(Math.round(n * 100) / 100) ? {} : {minimumFractionDigits:2, maximumFractionDigits:2});
+// A discount is a percent ("5%") or pesos off each unit ("1,475"). Blank stays blank, never zero.
+function dcDisc(t){
+  t = String(t || "").trim();
+  if(!t) return null;
+  const pc = /%\s*$/.test(t);
+  const n = dcNum(t.replace(/%\s*$/, ""));
+  return n === null ? null : {pc, n};
+}
+function dcLine(x){
+  const q = dcNum(x.q), srp = dcNum(x.srp), d = dcDisc(x.disc);
+  if(q === null || srp === null || !d) return null;
+  const unit = d.pc ? srp * (1 - d.n / 100) : srp - d.n;
+  return Math.round(unit * q * 100) / 100;
+}
+function dcMissing(){
+  if($("ltype").value !== "discount") return [];
+  const miss = [], v = id => $(id).value.trim();
+  if(!v("dc_to")) miss.push({id:"dc_to", label:"Store manager"});
+  if(!v("dc_branch") || /^citihardware$/i.test(v("dc_branch"))) miss.push({id:"dc_branch", label:"Branch"});
+  if(!v("dc_cust")) miss.push({id:"dc_cust", label:"Customer"});
+  if(!v("dc_txn")) miss.push({id:"dc_txn", label:"Transaction date"});
+  const rows = dcRows();
+  if(!rows.length) miss.push({id:"dc_items", label:"Items"});
+  [["q","a quantity"],["ds","a description"],["srp","an SRP"],["disc","a discount"]].forEach(([k, what]) => {
+    const n = rows.filter(x => !(x[k] || "").trim()).length;
+    if(n) miss.push({id:"dc_items", label:`${n} item${n > 1 ? "s" : ""} without ${what}`});
+  });
+  const bad = rows.filter(x => { const d = dcDisc(x.disc), srp = dcNum(x.srp);
+    return d && srp !== null && (d.pc ? d.n > 100 : d.n > srp); }).length;
+  if(bad) miss.push({id:"dc_items", label:`${bad} discount${bad > 1 ? "s" : ""} larger than the price`});
+  return miss;
+}
+function dcCheck(){
+  ["dc_to","dc_branch","dc_cust","dc_txn"].forEach(id => $(id).classList.remove("need"));
+  if($("ltype").value !== "discount"){ $("dcMiss").textContent = ""; return; }
+  const m = dcMissing();
+  m.forEach(x => { if(/^dc_(to|branch|cust|txn)$/.test(x.id)) $(x.id).classList.add("need"); });
+  $("dcMiss").textContent = m.length ? "Still needed: " + m.map(x => x.label).join(", ") + "." : "";
+}
+function drawDcItems(){
+  const a = dcRows();
+  const t = a.reduce((s, x) => s + (dcLine(x) || 0), 0);
+  $("dcSum").innerHTML = a.length ? `<b>${a.length} item${a.length > 1 ? "s" : ""}</b> · ${peso(t)} after discount` : "None yet.";
+  $("dcTb").textContent = a.length ? "Edit table…" : "Build table…";
+}
+function dcFromGrid(grid){
+  grid = grid.map(r => r.map(c => (c || "").trim())).filter(r => r.some(c => c));
+  if(!grid.length) return {rows:[], dropped:[]};
+  const keys = grid[0].map(h => DC_COLS.find(k => DC_RX[k].test(h)) || null);
+  let map = {q:0, br:1, bc:2, ds:3, srp:4, disc:5}, body = grid, dropped = [];
+  if(keys.filter(Boolean).length >= 2){
+    map = {}; keys.forEach((k, i) => { if(k && !(k in map)) map[k] = i; });
+    dropped = grid[0].filter((h, i) => h && !keys[i] && !/^(total|total price|amount|net|net price)$/i.test(h));   // a pasted total is worked out again
+    body = grid.slice(1);
+  }
+  // a column headed "Discount %" holds percents even when the cells say just "5"
+  const pcCol = body !== grid && /%/.test(grid[0][map.disc] || "");
+  const rows = body.map(r => Object.fromEntries(DC_COLS.map(k => [k, r[map[k]] || ""])))
+    .map(x => (pcCol && x.disc && !/%/.test(x.disc) && dcNum(x.disc) !== null ? {...x, disc: x.disc.trim() + "%"} : x))
+    .filter(x => DC_COLS.some(k => x[k]))
+    .filter(x => !/^(grand )?total$/i.test(x.q) && !/^(grand )?total$/i.test(x.br) && !/^(grand )?total$/i.test(x.ds));
+  return {rows, dropped};
+}
+function dcTbOpen(){
+  tbPlace(true, "dc");
+  const rows = dcRows().map(x => DC_COLS.map(k => x[k] || ""));
+  while(rows.length < 3) rows.push(["","","","","",""]);
+  tbLoad([DC_HEAD.slice()].concat(rows), null, null, null,
+    "One row per item. Discount as 5% or as pesos off each unit (1,475). Paste from Excel straight into a cell, or type it in.");
+}
+function dcTbCommit(){
+  const {rows, dropped} = dcFromGrid(TB.rows);
+  $("dc_items").value = JSON.stringify(rows);
+  drawDcItems(); dcCheck(); endDemo();
+  tbClose(); generate();
+  if(dropped.length) alert("These columns didn’t match Qty, Brand, Barcode, Description, SRP or Discount and were left out:\n\n• " + dropped.join("\n• "));
+}
+function discountData(data){
+  const v = id => $(id).value.trim();
+  const br = v("dc_branch") && !/^citihardware$/i.test(v("dc_branch")) ? v("dc_branch") : "";
+  const what = v("dc_what");
+  data.subject = "Authorization for Discounting" + (what ? ": " + what : "");
+  data.rcp = [v("dc_to") || "[Store manager]", "Store Manager", br || "[Branch]", v("dc_addr")].filter(Boolean).join("\n");
+  const rows = dcRows();
+  const P = t => ({type:"p", toks:toks(t)});
+  const NB = "\u00a0";
+  const when = v("dc_txn") ? sentDate(v("dc_txn")) : "[transaction date]";
+  const blocks = [
+    P(`We approve the discount below for the transaction of **${v("dc_cust") || "[customer]"}** at **${br || "[branch]"}** on **${when}**. ` +
+      `It applies to this transaction only.`)
+  ];
+  const fmtN = t => { const n = dcNum(t); return n === null ? (t || "") : n.toLocaleString("en-US"); };
+  // The discount cell says what was given in pesos too: "5% · ₱1,475", or for
+  // pesos off each unit on several units, "₱500 each · ₱1,000". The figure after
+  // the dot is the whole line's discount (unit discount × qty).
+  const off = x => { const t = dcLine(x), q = dcNum(x.q), srp = dcNum(x.srp);
+    return t === null || t < 0 ? null : Math.round((q * srp - t) * 100) / 100; };
+  const fmtD = x => { const d = dcDisc(x.disc), o = off(x);
+    if(!d) return x.disc || "";
+    if(o === null) return d.pc ? d.n + "%" : peso(d.n);
+    if(d.pc) return `${d.n}% · ${peso(o)}`;
+    return dcNum(x.q) > 1 ? `${peso(d.n)} each · ${peso(o)}` : peso(o); };
+  const body = rows.length
+    ? rows.map(x => { const t = dcLine(x);
+        return [x.q || "", x.br || "", x.bc || "", x.ds || "", fmtN(x.srp), fmtD(x),
+                t === null ? "" : t < 0 ? "[check discount]" : `**${peso(t)}**`]; })
+    : [[NB,NB,NB,NB,NB,NB,NB],[NB,NB,NB,NB,NB,NB,NB]];        // nothing yet: rows to click and fill
+  if(rows.length > 1){
+    const tot = rows.reduce((s, x) => s + Math.max(0, dcLine(x) || 0), 0);
+    const totOff = rows.reduce((s, x) => s + (off(x) || 0), 0);
+    body.push(["", "", "", "**TOTAL**", "", `**${peso(totOff)}**`, `**${peso(tot)}**`]);
+  }
+  const tb = tableBlock([["Qty","Brand","Barcode","Description","SRP","Discount","Total Price"]].concat(body),
+    ["center","left","left","left","right","right","right"], null, ["5%","9%","14%","30%","9%","18%","15%"]);
+  tb.tid = "dc_items";
+  blocks.push(tb);
+  data.blocks = blocks;
+  // Our officer authorizes; the store manager acknowledges, side by side.
+  data.signoffs = [
+    {label:"Authorized by", officer:true},
+    {label:"Acknowledged by", name: v("dc_to"), role: "Store Manager" + (br ? ", " + br : "")}];
+  data.signoffNote = "";
+}
+
 function storeVisitData(data){
   data.subject = "Request Store Visit Letter";
   data.rcp = $("sv_rcp").value.trim() || "[Recipient]";
@@ -4620,6 +4798,7 @@ function generate(scroll){
   if($("ltype").value === "pullout") pulloutData(data);
   if($("ltype").value === "incentive") incentiveData(data);
   if($("ltype").value === "storevisit") storeVisitData(data);
+  if($("ltype").value === "discount") discountData(data);
   $("sheets").className = "sheets";
 
   let pages = layoutLetter(data);
@@ -4818,7 +4997,8 @@ $("msg").addEventListener("keydown", e => {
 // Everything needed to rebuild the letter later, photos included.
 const FIELDS = ["paper","date","subject","rcp","salut","msg","closing","name","pos","email","phone","aplabel","apname","appos",
   "ltype","po_to","po_branch","po_dest","po_addr","po_date","po_date2","po_reason","po_other","po_rep","po_repdesig","po_list","po_items",
-  "in_brand","in_mon","in_year","in_roving","in_station","sv_rcp","sv_visits"];
+  "in_brand","in_mon","in_year","in_roving","in_station","sv_rcp","sv_visits",
+  "dc_to","dc_branch","dc_addr","dc_cust","dc_txn","dc_what","dc_items"];
 
 function draftName(){
   const tidy = t => (t || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
@@ -4828,6 +5008,10 @@ function draftName(){
     const who = tidy(f.fileName ? f.fileName(d) : nameOf(d)).slice(0, 60);
     const on = d[f.fileDate || "date"] || "";
     return [code, who, on].filter(Boolean).join(" - ");
+  }
+  if($("ltype").value === "discount"){
+    const br = tidy($("dc_branch").value).replace(/^citihardware\s*/i, "");
+    return ["Discount", br, tidy($("dc_what").value), tidy($("dc_cust").value), $("dc_txn").value].filter(Boolean).join(" - ");
   }
   if($("ltype").value === "storevisit"){
     const sur = svRows().map(x => (x.nm || "").trim().split(/\s+/).filter(w => !/^(jr\.?|sr\.?|ii|iii|iv)$/i.test(w)).pop() || "")
@@ -5141,6 +5325,7 @@ function tbClose(){ $("tb").style.display = "none"; }
 
 function tbInsert(){
   if(TB.inc === "sv"){ svTbCommit(); return; }
+  if(TB.inc === "dc"){ dcTbCommit(); return; }
   if(TB.inc){ inTbCommit(); return; }
   if(TB.po){ poTbCommit(); return; }
   const grid = TB.rows.map(r => r.map(c => (c || "").replace(/\t/g, " ").trim()));
@@ -5245,7 +5430,8 @@ function clearDoc(){
     const OPENERS = {salut: OPENER[lt].salut, closing: OPENER[lt].closing, aplabel:"Approved by:",
       po_to:"The Store Manager", po_list:"here", po_items:"[]",
       in_brand:"Einhell", in_roving:"[]", in_station:"[]", ...inDefaultPeriod(),
-      sv_rcp: SV_RCP, sv_visits:"[]"};
+      sv_rcp: SV_RCP, sv_visits:"[]",
+      dc_branch:"CitiHardware ", dc_items:"[]", dc_txn: today()};
     FIELDS.forEach(id => {
       if(id === "paper" || id === "ltype" || !$(id)) return;   // settings, not content
       $(id).value = id === "date" ? today() : (OPENERS[id] || "");
@@ -5613,7 +5799,7 @@ function addWriteLine(host){
 // No second signer yet: a screen-only box beside the signature offers one.
 // (The pull-out letter signs in its own grid, so it has none.)
 function addSecondSig(host){
-  if(WRITE.on || MODE !== "letter" || $("ltype").value === "pullout" || $("apname").value.trim() || $("apname").disabled) return;
+  if(WRITE.on || MODE !== "letter" || /^(pullout|discount)$/.test($("ltype").value) || $("apname").value.trim() || $("apname").disabled) return;
   const sig = [...host.querySelectorAll(".body > .sig")].pop();
   if(!sig || sig.classList.contains("seated")) return;
   const me = sig.querySelector(".me"), body = sig.parentElement;
@@ -5628,10 +5814,24 @@ function addSecondSig(host){
   w.style.top = ((mr.top - br.top) / k) + "px"; w.style.height = Math.max(60, mr.height / k) + "px";
   body.appendChild(w);
 }
+// Each item's description should sit on two lines at most; say which rows run longer.
+function dcLongCheck(host){
+  const note = $("dcLong"); if(!note) return;
+  note.textContent = "";
+  if(MODE !== "letter" || $("ltype").value !== "discount" || !dcRows().length) return;
+  const lines = el => { const r = document.createRange(); r.selectNodeContents(el);
+    return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size; };
+  const long = [];
+  host.querySelectorAll('[data-f="dc_items"] tbody tr').forEach((tr, i) => {
+    const td = tr.children[3]; if(td && !/^TOTAL$/.test(td.textContent.trim()) && lines(td) > 2) long.push(i + 1);
+  });
+  if(long.length) note.textContent = `Description in row${long.length > 1 ? "s" : ""} ${long.join(", ")} runs to three lines — shorten it to keep each row to two.`;
+}
 function tagLetter(host){
   const pull = $("ltype").value === "pullout";
   const inc = $("ltype").value === "incentive";
   const sv = $("ltype").value === "storevisit";
+  const dc = $("ltype").value === "discount";
   const v = id => $(id).value.trim();
   let tables = 0;
   [...host.children].forEach((pg, pi) => {
@@ -5640,12 +5840,13 @@ function tagLetter(host){
     const meta = body.querySelector(".meta");
     if(meta){
       const d = meta.querySelector(".val"); if(d) d.dataset.f = "date";
-      const sb = meta.querySelector(".sub"); if(sb && !pull && !sv) sb.dataset.f = inc ? "in_brand,in_mon,in_year" : "subject";
+      const sb = meta.querySelector(".sub"); if(sb && !pull && !sv) sb.dataset.f = inc ? "in_brand,in_mon,in_year" : dc ? "dc_what" : "subject";
     }
     const rcp = body.querySelector(":scope > .rcp");
     if(rcp){
       if(pull) [...rcp.querySelectorAll("p")].forEach((p, i) => { const id = ["po_to","po_branch","po_addr"][i]; if(id) p.dataset.f = id; });
       else if(sv) rcp.dataset.f = "sv_rcp";
+      else if(dc) [...rcp.querySelectorAll("p")].forEach((p, i) => { const id = ["dc_to", "", "dc_branch", "dc_addr"][i]; if(id) p.dataset.f = id; });
       else if(!inc) rcp.dataset.f = "rcp";
     }
     let salutDone = pi > 0 || !v("salut");
@@ -5660,12 +5861,13 @@ function tagLetter(host){
           const lb = (c.querySelector(".lb") || {}).textContent || "";
           if(/^approved by$/i.test(lb)) c.dataset.f = "po_to";
           if(/pulled out by/i.test(lb)) c.dataset.f = "po_rep,po_repdesig";
+          if(dc && /^acknowledged by$/i.test(lb)) c.dataset.f = "dc_to,dc_branch";
         });
         return;
       }
       if(!salutDone && el.tagName === "P"){ el.dataset.f = "salut"; salutDone = true; return; }
       if(el.classList.contains("tbl")){
-        if(inc || sv){ if(/^(in|sv)_/.test(el.dataset.tid || "")) el.dataset.f = el.dataset.tid; return; }
+        if(inc || sv || dc){ if(/^(in|sv|dc)_/.test(el.dataset.tid || "")) el.dataset.f = el.dataset.tid; return; }
         if(pull) el.dataset.f = "po_items";
         else if(el.dataset.tid) el.dataset.f = "table:" + el.dataset.tid;
         else el.dataset.f = "msg";
@@ -5674,6 +5876,7 @@ function tagLetter(host){
       }
       if(inc){ if(el.tagName === "P" && /^We would like to ask/.test(el.textContent)) el.dataset.f = "in_brand"; return; }
       if(sv) return;
+      if(dc){ if(el.tagName === "P" && /^We approve the discount/.test(el.textContent)) el.dataset.f = "dc_cust,dc_branch,dc_txn"; return; }
       if(!pull) el.dataset.f = "msg";
     });
     if(pull){
@@ -5695,7 +5898,7 @@ function tagPage(host){
   const first = host.firstElementChild;
   if(!first || first.dataset.tg) return;
   first.dataset.tg = "1";
-  if(MODE === "letter"){ tagLetter(host); addWriteLine(host); addSecondSig(host); }
+  if(MODE === "letter"){ tagLetter(host); addWriteLine(host); addSecondSig(host); dcLongCheck(host); }
 }
 
 // ---- the box
@@ -5792,7 +5995,7 @@ function openPop(anchor){
     p.classList.add("wide");
     body.appendChild(el);
     el.addEventListener("input", PAGE.msgInput || (PAGE.msgInput = () => afterEdit()));
-  } else if(/^(po_items|in_roving|in_station|sv_visits|table:\d+)$/.test(ids[0] || "")){
+  } else if(/^(po_items|in_roving|in_station|sv_visits|dc_items|table:\d+)$/.test(ids[0] || "")){
     const n = document.createElement("p"); n.className = "ppn";
     n.textContent = "\u{1F512} This table is locked — the letter is signed and sealed. Clear the letter to change it.";
     body.appendChild(n);
@@ -5904,8 +6107,9 @@ $("sheets").addEventListener("click", e => {
   if(cb && MODE === "form" && !e.target.closest(".wr") && tickBox(cb, host)) return;
   const f = host.dataset.f || "";
   // A signed letter's tables are part of what the seal covers: say so, don't open the editor.
-  if(/^(po_items|in_roving|in_station|sv_visits|table:\d+)$/.test(f) && tableLocked(f)){ openPop(host); return; }
+  if(/^(po_items|in_roving|in_station|sv_visits|dc_items|table:\d+)$/.test(f) && tableLocked(f)){ openPop(host); return; }
   if(f === "sv_visits"){ tbModal(svTbOpen); return; }
+  if(f === "dc_items"){ tbModal(dcTbOpen); return; }
   if(f === "po_items"){ tbModal(poTbOpen); return; }
   if(f === "in_roving" || f === "in_station"){ tbModal(() => inTbOpen(f.slice(3))); return; }
   if(f.startsWith("table:")){ const id = +f.slice(6); tbModal(() => { tbPlace(false); tbEdit(id); }); return; }
@@ -5938,6 +6142,7 @@ function blanks(){
   if(MODE === "letter"){
     if($("ltype").value === "incentive") return inMissing();
     if($("ltype").value === "storevisit") return svMissing();
+    if($("ltype").value === "discount") return dcMissing();
     if($("ltype").value === "pullout"){
       const out = PO_REQ.filter(([id]) => !$(id).value.trim()).map(([id, label]) => ({id, label}));
       if($("po_reason").value === "other" && !$("po_other").value.trim()) out.push({id:"po_other", label:"Other reason", at:"po_reason,po_other"});
@@ -5956,6 +6161,7 @@ function goBlank(b){
   if(b.id === "po_items"){ tbModal(poTbOpen); return; }
   if(b.id === "in_roving" || b.id === "in_station"){ tbModal(() => inTbOpen(b.id.slice(3))); return; }
   if(b.id === "sv_visits"){ tbModal(svTbOpen); return; }
+  if(b.id === "dc_items"){ tbModal(dcTbOpen); return; }
   const el = [...$("sheets").querySelectorAll("[data-f]")].find(x => x.dataset.f.split(",").includes(b.id));
   if(el){
     el.scrollIntoView({block:"center", behavior:"smooth"});
@@ -6582,6 +6788,8 @@ function inDefaultPeriod(){
 }
 const SV_RCP = "Jerrica M. Damasin\nHR Coordinator\nDavao Manpower Incorporated\nDavao City";
 $("svTb").addEventListener("click", () => tbModal(svTbOpen));
+$("dcTb").addEventListener("click", () => tbModal(dcTbOpen));
+["dc_to","dc_branch","dc_cust","dc_txn"].forEach(id => $(id).addEventListener("input", dcCheck));
 $("sv_rcp").addEventListener("input", svCheck);
 $("inRovTb").addEventListener("click", () => tbModal(() => inTbOpen("roving")));
 $("inStaTb").addEventListener("click", () => tbModal(() => inTbOpen("station")));
@@ -6618,6 +6826,7 @@ $("in_mon").addEventListener("change", inCheck);
 // defaults
 (function(){
   $("date").value = today();
+  $("dc_txn").value = today();
   Object.entries(inDefaultPeriod()).forEach(([k, v]) => { $(k).value = v; });
   applyLtype(false);
   { const ink = document.createElement("span"); ink.className = "ink"; $("tabs").appendChild(ink); }
