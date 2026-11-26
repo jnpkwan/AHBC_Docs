@@ -225,9 +225,6 @@ footer .tag{font-family:var(--display);font-weight:700;font-size:10px;letter-spa
               <p>Total ito for the whole year, hindi per illness. Lahat ng gamit mo within the year ay ibabawas dito. Babalik sa full amount ang limit every year.</p>
             </dd>
 
-            <dt>Outpatient test limit</dt>
-            <dd>Part of your yearly limit na pwedeng gamitin for lab tests, x-rays, ultrasounds at iba pang procedures kahit hindi ka na-admit. Kasama ito sa yearly limit, hindi dagdag.</dd>
-
             <dt>Room</dt>
             <dd>
               <p>Kung kailangan mong mag-stay sa hospital (ma-admit), ito ang klase ng kwarto na sagot ng plan mo:</p>
@@ -364,7 +361,6 @@ document.querySelectorAll("[data-bronze-limit]").forEach(e => e.textContent = pe
   t.querySelector("tbody").innerHTML =
     row("Room", p => p.room.replace(" room", ""), "wrap") +
     row("Yearly limit", p => num(p.limit)) +
-    row("Outpatient test limit", p => num(p.op)) +
     row("Premium per year", p => num(p.annual)) +
     row("Company pays <span class=\"op\">(−)</span>", p => "−" + num(Math.min(p.annual, COMPANY_CAP))) +
     row("You pay per year", p => num(youYear(p))) +
