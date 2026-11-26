@@ -222,7 +222,7 @@ footer .tag{font-family:var(--display);font-weight:700;font-size:10px;letter-spa
                 <p>₱50,000 ang hospital bill mo → <strong>Maxicare pays all ₱50,000.</strong> May natitira ka pang ₱30,000 for the rest of the year.</p>
                 <p>₱100,000 ang hospital bill mo → <strong>Maxicare pays ₱80,000</strong>, at ikaw ang magbabayad ng ₱20,000 na sobra sa limit.</p>
               </div>
-              <p>Babalik sa full amount ang limit every year. Kung per illness o total per year ang limit, i-co-confirm namin once we get the schedule of benefits.</p>
+              <p>Total ito for the whole year, hindi per illness. Lahat ng gamit mo within the year ay ibabawas dito. Babalik sa full amount ang limit every year.</p>
             </dd>
 
             <dt>Outpatient test limit</dt>
@@ -236,7 +236,7 @@ footer .tag{font-family:var(--display);font-weight:700;font-size:10px;letter-spa
                 <li><strong>Semi-private</strong> <span class="tier">Silver</span><br>Shared room, kasama ang ilang ibang patients.</li>
                 <li><strong>Regular private</strong> <span class="tier">Gold</span><br>Sarili mong kwarto.</li>
               </ul>
-              <p>Kapag mas mahal na room ang pinili mo kaysa sa plan mo, ikaw ang magbabayad ng difference.</p>
+              <p>Sagot ng plan mo ang room hanggang sa room type ng plan mo lang. Kapag mas mahal na room ang kinuha mo, ikaw ang magbabayad ng difference.</p>
             </dd>
           </dl>
         </section>
@@ -244,7 +244,7 @@ footer .tag{font-family:var(--display);font-weight:700;font-size:10px;letter-spa
         <section class="sec">
           <p class="eyebrow">How much you pay</p>
           <h2 class="h3">The computation</h2>
-          <p>Ang company ang sasagot ng <span data-cap></span> a year para sa bawat isa. Ikaw ang sa natitira, hinati sa 12 months at ibabawas sa salary mo.</p>
+          <p>Ang company ang sasagot ng <span data-cap></span> a year para sa bawat isa. Ikaw ang sa natitira, hinati sa 12 months, tapos hinati ulit sa 2 paydays a month. Ito ang ibabawas sa bawat sweldo mo.</p>
           <div class="table-wrap">
             <table class="calc" id="calc">
               <thead><tr><th></th></tr></thead>
@@ -368,13 +368,14 @@ document.querySelectorAll("[data-bronze-limit]").forEach(e => e.textContent = pe
     row("Premium per year", p => num(p.annual)) +
     row("Company pays <span class=\"op\">(−)</span>", p => "−" + num(Math.min(p.annual, COMPANY_CAP))) +
     row("You pay per year", p => num(youYear(p))) +
-    row("You pay per month <span class=\"op\">(÷ 12)</span>", p => num(youYear(p) / 12, 2), "total");
+    row("You pay per month <span class=\"op\">(÷ 12)</span>", p => num(youYear(p) / 12, 2)) +
+    row("You pay per payday <span class=\"op\">(÷ 2)</span>", p => num(youYear(p) / 24, 2), "total");
 })();
 document.getElementById("planOpts").innerHTML = PLANS.map(p => `
   <label class="opt opt-plan"><input type="radio" name="plan" value="${p.name}"><span class="dot"></span>
     <span class="plan-body">
-      <span class="plan-top"><span class="plan-name">${p.name}</span><span class="plan-price">${peso(monthly(p), 2)} <small>/ month</small></span></span>
-      <span class="plan-meta" style="display:block">${p.room} · ${peso(p.limit)} yearly limit</span>
+      <span class="plan-top"><span class="plan-name">${p.name}</span><span class="plan-price">${peso(monthly(p) / 2, 2)} <small>/ payday</small></span></span>
+      <span class="plan-meta" style="display:block">${peso(monthly(p), 2)} a month · ${p.room} · ${peso(p.limit)} yearly limit</span>
     </span>
   </label>`).join("");
 document.querySelectorAll("[data-deadline]").forEach(e => e.textContent = DEADLINE);
