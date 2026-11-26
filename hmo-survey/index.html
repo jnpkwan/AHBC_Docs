@@ -371,7 +371,7 @@ document.getElementById("planOpts").innerHTML = PLANS.map(p => `
   <label class="opt opt-plan"><input type="radio" name="plan" value="${p.name}"><span class="dot"></span>
     <span class="plan-body">
       <span class="plan-top"><span class="plan-name">${p.name}</span><span class="plan-price">${peso(monthly(p), 2)} <small>/ month</small></span></span>
-      <span class="plan-meta" style="display:block">${p.room}</span>
+      <span class="plan-meta" style="display:block">${peso(p.limit)} yearly limit</span>
     </span>
   </label>`).join("");
 document.querySelectorAll("[data-deadline]").forEach(e => e.textContent = DEADLINE);
